@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   scan:
-    name: Scan TOP-40 crypto market
+    name: Scan TOP-70 crypto market
     runs-on: ubuntu-latest
     timeout-minutes: 9
 
@@ -31,7 +31,7 @@ jobs:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       TVKIT_AUTH_TOKEN: ${{ secrets.TVKIT_AUTH_TOKEN }}
-      TOP_N_SYMBOLS: '40'
+      TOP_N_SYMBOLS: '70'
       UNIVERSE_REFRESH_SECONDS: '21600'
       MAX_TV_CONCURRENT_REQUESTS: '3'
       BARS_COUNT: '500'
