@@ -1,0 +1,6 @@
+tvkit
+pyvsmc
+pandas
+numpy
+aiohttp
+python-dotenv
