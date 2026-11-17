@@ -38,7 +38,7 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
 
 # Universe: TOP N активных Binance Spot пар с котировкой USDT.
-TOP_N_SYMBOLS = int(os.getenv("TOP_N_SYMBOLS", "40"))
+TOP_N_SYMBOLS = int(os.getenv("TOP_N_SYMBOLS", "70"))
 UNIVERSE_REFRESH_SECONDS = int(os.getenv("UNIVERSE_REFRESH_SECONDS", str(6 * 60 * 60)))
 MIN_24H_QUOTE_VOLUME = float(os.getenv("MIN_24H_QUOTE_VOLUME", "0"))
 
