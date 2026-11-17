@@ -65,6 +65,9 @@ UNICORN_CONFLUENCE_BARS = 4
 RANGE_LOOKBACK = 40
 MIN_RR = 2.0
 SL_BUFFER = 0.001  # 0.1% за экстремумом/зоной
+ATR_PERIOD = 14
+MAX_ENTRY_DISTANCE_ATR = 0.75
+SL_ATR_BUFFER = 0.15
 
 # Необязательный расчёт размера позиции. Ноль = отключено.
 # Вводится вручную; скрипт НЕ получает баланс биржевого аккаунта.
@@ -444,6 +447,27 @@ def last_true(values: np.ndarray, start: int = 0, end: int | None = None) -> int
 def candle_intersects_zone(ctx: dict[str, Any], index: int, lower: float, upper: float) -> bool:
     return bool(ctx["low"][index] <= upper and ctx["high"][index] >= lower)
 
+def calculate_atr(ctx: dict[str, Any]) -> float:
+    high = np.asarray(ctx["high"], dtype=float)
+    low = np.asarray(ctx["low"], dtype=float)
+    close = np.asarray(ctx["close"], dtype=float)
+
+    if len(close) < ATR_PERIOD + 1:
+        return 0.0
+
+    previous_close = np.concatenate(([close[0]], close[:-1]))
+
+    true_range = np.maximum(
+        high - low,
+        np.maximum(
+            np.abs(high - previous_close),
+            np.abs(low - previous_close),
+        ),
+    )
+
+    atr = float(np.mean(true_range[-ATR_PERIOD:]))
+
+    return atr if np.isfinite(atr) else 0.0
 
 def get_active_fvg(
     ctx: dict[str, Any],
@@ -497,7 +521,6 @@ def get_active_fvg(
             }
 
     return None
-
 
 def get_active_ob(
     ctx: dict[str, Any],
@@ -616,8 +639,31 @@ def build_signal(
     if entry <= 0:
         return None
 
+    atr = calculate_atr(ctx)
+    current_close = float(ctx["close"][-1])
+
+    if atr > 0:
+        if current_close < lower:
+            entry_distance = lower - current_close
+        elif current_close > upper:
+            entry_distance = current_close - upper
+        else:
+            entry_distance = 0.0
+
+        if entry_distance > atr * MAX_ENTRY_DISTANCE_ATR:
+            return None
+
     if direction == "LONG":
-        sl = float(sl_override) if sl_override is not None else lower * (1 - SL_BUFFER)
+        sl_buffer = max(
+            lower * SL_BUFFER,
+            atr * SL_ATR_BUFFER,
+        )    
+        sl = (
+            float(sl_override)
+            if sl_override is not None
+            else lower - sl_buffer
+        )
+        
         if sl >= entry:
             return None
         risk = entry - sl
@@ -627,7 +673,15 @@ def build_signal(
         if tp <= entry:
             return None
     elif direction == "SHORT":
-        sl = float(sl_override) if sl_override is not None else upper * (1 + SL_BUFFER)
+        sl_buffer = max(
+            upper * SL_BUFFER,
+            atr * SL_ATR_BUFFER,
+        )
+        sl = (
+            float(sl_override)
+            if sl_override is not None
+            else upper + sl_buffer
+        )
         if sl <= entry:
             return None
         risk = sl - entry
@@ -1047,7 +1101,7 @@ def format_signal(symbol: str, timeframe: str, signal: dict[str, Any]) -> str:
             if signal.get("sizing") else ""
         )
         + f"\n<b>SMC confirmation:</b> {html.escape(signal['reason'])}\n"
-        f"<b>Closed candle:</b> {html.escape(signal['bar_time'] or 'N/A')}"
+        f"<b>Candle open (UTC):</b> {html.escape(signal['bar_time'] or 'N/A')}"
     )
 
 
